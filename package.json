@@ -1,7 +1,11 @@
 {
   "name": "com.phoretell.core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "displayName": "Phoretell Core",
   "description": "Shared scripts and utilities for Phoretell Studio Unity projects.",
-  "unity": "6000.0"
+  "unity": "6000.0",
+  "dependencies": {
+    "com.unity.inputsystem": "1.18.0",
+    "com.unity.ugui": "2.0.0"
+  }
 }
