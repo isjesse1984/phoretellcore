@@ -1,0 +1,7 @@
+{
+  "name": "com.phoretell.core",
+  "version": "0.1.0",
+  "displayName": "Phoretell Core",
+  "description": "Shared scripts and utilities for Phoretell Studio Unity projects.",
+  "unity": "6000.0"
+}
