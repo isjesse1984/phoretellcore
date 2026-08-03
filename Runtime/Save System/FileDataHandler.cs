@@ -14,8 +14,22 @@ namespace Phoretell
     {
         private const string FileExtension = ".4TELL";
         private readonly string rootDirectory;
+        private readonly bool encryptSaveFiles;
+        private readonly bool prettyPrintJson;
+        private readonly string fileNamePattern;
+        private readonly string fileExtension;
+        private bool encryptionErrorReported;
+
+        public bool IsOperational => CanAccessSaveFiles();
 
         public FileDataHandler(string rootDirectory)
+            : this(rootDirectory, null)
+        {
+        }
+
+        public FileDataHandler(
+            string rootDirectory,
+            DataPersistenceSettings settings)
         {
             if (string.IsNullOrWhiteSpace(rootDirectory))
             {
@@ -23,10 +37,23 @@ namespace Phoretell
             }
 
             this.rootDirectory = Path.GetFullPath(rootDirectory);
+            encryptSaveFiles = settings != null && settings.EncryptSaveFiles;
+            prettyPrintJson = settings == null || settings.PrettyPrintJson;
+            fileNamePattern = settings == null
+                ? DataPersistenceSettings.DefaultFileNamePattern
+                : settings.SaveFileName;
+            fileExtension = settings == null
+                ? FileExtension
+                : settings.SaveFileExtension;
         }
 
         public bool Save(string profileId, string dataKey, object data)
         {
+            if (!CanAccessSaveFiles())
+            {
+                return false;
+            }
+
             if (data == null)
             {
                 Debug.LogError($"Cannot save null data for key '{dataKey}'.");
@@ -50,7 +77,7 @@ namespace Phoretell
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
 
-                string json = JsonUtility.ToJson(data, true);
+                string json = JsonUtility.ToJson(data, prettyPrintJson);
                 File.WriteAllText(temporaryPath, json, new UTF8Encoding(false));
 
                 if (File.Exists(fullPath))
@@ -73,6 +100,11 @@ namespace Phoretell
         public bool TryLoad(string profileId, string dataKey, Type dataType, out object data)
         {
             data = null;
+
+            if (!CanAccessSaveFiles())
+            {
+                return false;
+            }
 
             if (dataType == null)
             {
@@ -168,7 +200,27 @@ namespace Phoretell
                     $"Save key '{dataKey}' is not a valid file name.", nameof(dataKey));
             }
 
-            return Path.Combine(GetProfilePath(profileId), dataKey + FileExtension);
+            if (string.IsNullOrWhiteSpace(fileNamePattern) ||
+                fileNamePattern.IndexOf(
+                    DataPersistenceSettings.DataKeyToken,
+                    StringComparison.Ordinal) < 0)
+            {
+                throw new ArgumentException(
+                    $"Save file name pattern must contain " +
+                    $"'{DataPersistenceSettings.DataKeyToken}'.");
+            }
+
+            string fileName = fileNamePattern.Replace(
+                DataPersistenceSettings.DataKeyToken,
+                dataKey) + fileExtension;
+
+            if (!IsValidPathSegment(fileName))
+            {
+                throw new ArgumentException(
+                    $"Save file name '{fileName}' is not valid. Check the data-persistence settings.");
+            }
+
+            return Path.Combine(GetProfilePath(profileId), fileName);
         }
 
         private string GetProfilePath(string profileId)
@@ -196,6 +248,25 @@ namespace Phoretell
                 // The original save error is the useful one. Do not hide it with
                 // a secondary cleanup exception.
             }
+        }
+
+        private bool CanAccessSaveFiles()
+        {
+            if (!encryptSaveFiles)
+            {
+                return true;
+            }
+
+            if (!encryptionErrorReported)
+            {
+                Debug.LogError(
+                    "Save-file encryption is enabled, but no authenticated-encryption " +
+                    "provider is implemented. Save and load operations are blocked to " +
+                    "avoid writing data as unprotected plaintext.");
+                encryptionErrorReported = true;
+            }
+
+            return false;
         }
     }
 }

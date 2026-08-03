@@ -46,6 +46,7 @@ namespace Phoretell
         [SerializeField] private bool saveOnApplicationQuit = true;
 
         private FileDataHandler fileDataHandler;
+        private DataPersistenceSettings settings;
 
         public static DataPersistenceHandler Instance
         {
@@ -80,10 +81,9 @@ namespace Phoretell
             instance = this;
             DontDestroyOnLoad(gameObject);
 
-            GameSavesPath = System.IO.Path.Combine(
-                Application.persistentDataPath,
-                "Saves");
-            fileDataHandler = new FileDataHandler(GameSavesPath);
+            settings = DataPersistenceSettings.Load();
+            GameSavesPath = settings.GetSaveRootPath();
+            fileDataHandler = new FileDataHandler(GameSavesPath, settings);
         }
 
         public bool ChangeSelectedProfileId(string newProfileId)
@@ -123,7 +123,7 @@ namespace Phoretell
 
         public bool SaveGame()
         {
-            if (!EnsureProfileSelected())
+            if (!EnsureProfileSelected() || !fileDataHandler.IsOperational)
             {
                 return false;
             }
@@ -172,7 +172,7 @@ namespace Phoretell
 
         public bool LoadGame()
         {
-            if (!EnsureProfileSelected())
+            if (!EnsureProfileSelected() || !fileDataHandler.IsOperational)
             {
                 return false;
             }
@@ -220,6 +220,11 @@ namespace Phoretell
         public IReadOnlyList<SaveProfileInfo> GetAllProfiles()
         {
             var profiles = new List<SaveProfileInfo>();
+
+            if (!fileDataHandler.IsOperational)
+            {
+                return profiles;
+            }
 
             foreach (string profileId in fileDataHandler.GetProfileIds())
             {
@@ -326,6 +331,8 @@ namespace Phoretell
         private void OnApplicationQuit()
         {
             if (saveOnApplicationQuit &&
+                settings != null &&
+                settings.SaveOnApplicationQuit &&
                 FileDataHandler.IsValidPathSegment(selectedProfileId))
             {
                 SaveGame();

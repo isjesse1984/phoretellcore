@@ -80,3 +80,24 @@ Packages/com.phoretell.save-system/
 
 Keep `MyGameData` and all `ISaveLoad<MyGameData>` implementations under the game's
 `Assets/` folder. Do not put game-specific data classes in the package repository.
+
+## Editor management window
+
+Open **Tools > Phoretell > Data Persistence** to inspect the data classes currently
+referenced by `ISaveLoad<TData>` providers, open or locate their scripts, create a
+new data class and companion provider, or edit project-wide runtime settings.
+
+Newly generated providers cache exact-name, exact-type field bindings in `Awake`.
+They can target a manually assigned `MonoBehaviour`, or automatically choose the
+other component on the same GameObject with the most matching public or
+`[SerializeField]` fields. Static, readonly, and non-serialized fields are ignored.
+
+The settings asset is created under `Assets/Resources` only when requested from the
+window. Without one, the runtime retains its previous defaults: pretty-printed JSON,
+`{dataKey}.4TELL` files, and a `Saves` directory under
+`Application.persistentDataPath`.
+
+Encryption is intentionally not advertised as implemented. If the reserved
+encryption setting is enabled, save and load operations are blocked rather than
+silently writing plaintext. The authenticated-encryption integration point is in
+`FileDataHandler`.
