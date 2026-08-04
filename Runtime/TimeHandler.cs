@@ -8,20 +8,13 @@ namespace Phoretell
     /// <summary>
     /// Package-owned save payload for the in-game clock.
     /// </summary>
-    [Serializable]
-    public sealed class TimeSaveData
-    {
-        public double totalSeconds = 43_200d;
-
-        [FormerlySerializedAs("timeMultiplyer")]
-        public float timeMultiplier = 1f;
-    }
+    
 
     /// <summary>
     /// Advances and displays an accelerated in-game clock.
     /// totalSeconds is the single source of truth; all display values are derived.
     /// </summary>
-    public sealed class TimeHandler : Singleton<TimeHandler>, ISaveLoad<TimeSaveData>
+    public sealed class TimeHandler : Singleton<TimeHandler>
     {
         private const double SecondsPerDay = 86_400d;
         private const double SecondsPerHour = 3_600d;
@@ -159,30 +152,6 @@ namespace Phoretell
             return (int)Math.Floor(totalSeconds);
         }
 
-        public void SaveData(TimeSaveData data)
-        {
-            if (data == null)
-            {
-                Debug.LogError("Cannot save time into a null TimeSaveData object.", this);
-                return;
-            }
-
-            data.totalSeconds = totalSeconds;
-            data.timeMultiplier = timeMultiplier;
-        }
-
-        public void LoadData(TimeSaveData data)
-        {
-            if (data == null)
-            {
-                Debug.LogWarning("No TimeSaveData was supplied. The current clock was kept.", this);
-                return;
-            }
-
-            totalSeconds = Math.Max(0d, data.totalSeconds);
-            SetTimeMultiplier(data.timeMultiplier);
-            RefreshClock(true);
-        }
 
         private void RefreshClock(bool force)
         {
