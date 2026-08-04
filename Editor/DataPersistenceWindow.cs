@@ -21,6 +21,9 @@ namespace Phoretell.Editor
         private string statusMessage;
         private MessageType statusType;
 
+        private GUIStyle sectionHeaderStyle;
+        private GUIStyle sectionSubtitleStyle;
+
         [MenuItem("Tools/Phoretell/Data Persistence")]
         public static void OpenWindow()
         {
@@ -35,8 +38,8 @@ namespace Phoretell.Editor
             titleContent = new GUIContent("Phoretell Data Persistence");
             RefreshDataTypes();
             FindSettingsAsset();
+            BuildStyles();
         }
-
         private void OnGUI()
         {
             DrawToolbar();
@@ -46,6 +49,58 @@ namespace Phoretell.Editor
             EditorGUILayout.Space(12f);
             DrawSettingsSection();
             EditorGUILayout.EndScrollView();
+        }
+
+        private void BuildStyles()
+        {
+            sectionHeaderStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 12
+            };
+
+            sectionSubtitleStyle = new GUIStyle(EditorStyles.wordWrappedMiniLabel)
+            {
+                richText = true
+            };
+        }
+        private Color GetDataClassesTint()
+        {
+            return EditorGUIUtility.isProSkin
+                ? new Color(0.24f, 0.30f, 0.40f, 1f)
+                : new Color(0.82f, 0.89f, 0.98f, 1f);
+        }
+        private Color GetSelectedClassTint()
+        {
+            return EditorGUIUtility.isProSkin
+                ? new Color(0.38f, 0.31f, 0.20f, 1f)
+                : new Color(0.98f, 0.90f, 0.78f, 1f);
+        }
+        private Color GetSettingsTint()
+        {
+            return EditorGUIUtility.isProSkin
+                ? new Color(0.22f, 0.33f, 0.25f, 1f)
+                : new Color(0.84f, 0.94f, 0.86f, 1f);
+        }
+        private void BeginTintedSection(Color tint)
+        {
+            Color previous = GUI.backgroundColor;
+            GUI.backgroundColor = tint;
+            EditorGUILayout.BeginVertical(GUI.skin.box);
+            GUI.backgroundColor = previous;
+        }
+        private void EndTintedSection()
+        {
+            EditorGUILayout.EndVertical();
+        }
+        private void DrawSectionHeader(string title, string subtitle)
+        {
+            EditorGUILayout.LabelField(title, sectionHeaderStyle);
+            if (!string.IsNullOrEmpty(subtitle))
+            {
+                EditorGUILayout.LabelField(subtitle, sectionSubtitleStyle);
+            }
+
+            EditorGUILayout.Space(4f);
         }
 
         internal void NotifyScriptsCreated(string typeName, string assetPath)
@@ -97,10 +152,10 @@ namespace Phoretell.Editor
 
         private void DrawDataClassesSection()
         {
-            EditorGUILayout.LabelField("Data Classes", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField(
-                "Serializable payloads currently used by ISaveLoad<TData> provider components.",
-                EditorStyles.wordWrappedMiniLabel);
+            BeginTintedSection(GetDataClassesTint());
+            DrawSectionHeader(
+                "Data Classes",
+                "Serializable payloads currently used by ISaveLoad<TData> provider components.");
 
             if (dataTypes.Count == 0)
             {
@@ -108,6 +163,8 @@ namespace Phoretell.Editor
                     "No valid save-data classes were found. Create one here or implement " +
                     "ISaveLoad<TData> on a MonoBehaviour for an existing [Serializable] class.",
                     MessageType.Info);
+
+                EndTintedSection();
                 return;
             }
 
@@ -123,6 +180,9 @@ namespace Phoretell.Editor
             }
 
             EditorGUILayout.EndScrollView();
+            EndTintedSection();
+
+            EditorGUILayout.Space(8f);
             DrawSelectedDataTypeActions();
         }
 
@@ -159,17 +219,22 @@ namespace Phoretell.Editor
 
         private void DrawSelectedDataTypeActions()
         {
+            BeginTintedSection(GetSelectedClassTint());
+            DrawSectionHeader(
+                "Selected Class",
+                "Details and actions for the currently highlighted save-data class.");
+
             SaveDataTypeInfo selected = GetSelectedType();
             if (selected == null)
             {
                 EditorGUILayout.HelpBox(
                     "Select a data class to inspect or open its script.",
                     MessageType.None);
+                EndTintedSection();
                 return;
             }
 
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            EditorGUILayout.LabelField("Selected Class", EditorStyles.boldLabel);
             EditorGUILayout.LabelField("Class", selected.DataType.FullName);
             EditorGUILayout.LabelField("Base Class", selected.BaseTypeName);
             EditorGUILayout.LabelField(
@@ -225,12 +290,16 @@ namespace Phoretell.Editor
                     "Framework/package scripts, shared scripts, and unidentified scripts are protected.",
                     EditorStyles.wordWrappedMiniLabel);
             }
-            EditorGUILayout.EndVertical();
-        }
 
+            EditorGUILayout.EndVertical();
+            EndTintedSection();
+        }
         private void DrawSettingsSection()
         {
-            EditorGUILayout.LabelField("Settings", EditorStyles.boldLabel);
+            BeginTintedSection(GetSettingsTint());
+            DrawSectionHeader(
+                "Settings",
+                "Project-wide file naming, storage, and save behavior.");
 
             if (settings == null)
             {
@@ -244,6 +313,8 @@ namespace Phoretell.Editor
                 {
                     CreateSettingsAsset();
                 }
+
+                EndTintedSection();
                 return;
             }
 
@@ -255,17 +326,13 @@ namespace Phoretell.Editor
 
             serializedSettings.Update();
             EditorGUI.BeginChangeCheck();
-            SerializedProperty encryption = serializedSettings.FindProperty(
-                "encryptSaveFiles");
-            SerializedProperty prettyPrint = serializedSettings.FindProperty(
-                "prettyPrintJson");
-            SerializedProperty fileName = serializedSettings.FindProperty(
-                "saveFileName");
-            SerializedProperty extension = serializedSettings.FindProperty(
-                "saveFileExtension");
+
+            SerializedProperty encryption = serializedSettings.FindProperty("encryptSaveFiles");
+            SerializedProperty prettyPrint = serializedSettings.FindProperty("prettyPrintJson");
+            SerializedProperty fileName = serializedSettings.FindProperty("saveFileName");
+            SerializedProperty extension = serializedSettings.FindProperty("saveFileExtension");
             SerializedProperty folder = serializedSettings.FindProperty("saveFolder");
-            SerializedProperty saveOnQuit = serializedSettings.FindProperty(
-                "saveOnApplicationQuit");
+            SerializedProperty saveOnQuit = serializedSettings.FindProperty("saveOnApplicationQuit");
 
             EditorGUILayout.PropertyField(encryption, new GUIContent("Encrypt Save Files"));
             if (encryption.boolValue)
@@ -291,17 +358,17 @@ namespace Phoretell.Editor
 
             EditorGUILayout.PropertyField(extension, new GUIContent("Save File Extension"));
             EditorGUILayout.PropertyField(folder, new GUIContent("Save Folder"));
-            EditorGUILayout.PropertyField(
-                saveOnQuit,
-                new GUIContent("Save on Application Quit"));
+            EditorGUILayout.PropertyField(saveOnQuit, new GUIContent("Save on Application Quit"));
 
             string previewFolder = string.IsNullOrWhiteSpace(folder.stringValue)
                 ? "Saves"
                 : folder.stringValue.Trim();
+
             EditorGUILayout.LabelField(
                 "Runtime Storage",
                 Path.Combine(Application.persistentDataPath, previewFolder),
                 EditorStyles.wordWrappedLabel);
+
             EditorGUILayout.HelpBox(
                 "The save system writes one JSON file per data class and one profile metadata " +
                 "file. Save File Name is therefore a pattern rather than a single shared file.",
@@ -320,13 +387,15 @@ namespace Phoretell.Editor
                 Selection.activeObject = settings;
                 EditorGUIUtility.PingObject(settings);
             }
+
             if (GUILayout.Button("Use Runtime Defaults"))
             {
                 ResetSettingsToDefaults();
             }
             EditorGUILayout.EndHorizontal();
-        }
 
+            EndTintedSection();
+        }
         private void RefreshDataTypes()
         {
             dataTypes.Clear();
