@@ -3,6 +3,7 @@
   "rootNamespace": "Phoretell",
   "references": [
     "Unity.InputSystem",
+    "Unity.Cinemachine",
     "Unity.TextMeshPro",
     "UnityEngine.UI"
   ],
