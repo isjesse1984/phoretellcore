@@ -10,9 +10,10 @@ using Unity.VisualScripting;
 
 namespace Phoretell
 {
-    public class SceneHandler : Singleton<SceneHandler>
-    {
+    public class SceneHandler :     PersistentSingleton<SceneHandler>
+{
     private const float SceneReadyProgress = 0.9f;
+
 
     [Header("Loading Screen")]
     [SerializeField] private GameObject loadingScreenObject;
@@ -38,7 +39,7 @@ namespace Phoretell
     {
         base.Awake();
 
-        if (!TryGetInstance(out GameMarketSceneHandler activeHandler) ||
+        if (!TryGetInstance(out SceneHandler activeHandler) ||
             activeHandler != this)
         {
             return;
@@ -53,7 +54,7 @@ namespace Phoretell
 
     private void OnEnable()
     {
-        if (TryGetInstance(out GameMarketSceneHandler activeHandler) &&
+        if (TryGetInstance(out SceneHandler activeHandler) &&
             activeHandler == this)
         {
             SceneManager.sceneLoaded += OnSceneLoaded;
