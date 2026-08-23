@@ -31,44 +31,6 @@ public sealed class InputHandler : PersistentSingleton<InputHandler>
     private InputAction lookAction;
     private bool referencesResolved;
 
-    private static InputHandler instance;
-    private static bool hasLoggedMissingInstance;
-
-    public static InputHandler Instance
-    {
-        get
-        {
-            if (instance == null)
-            {
-                instance = FindFirstObjectByType<InputHandler>(
-                    FindObjectsInactive.Include);
-            }
-
-            if (instance == null && !hasLoggedMissingInstance)
-            {
-                Debug.LogError(
-                    $"{nameof(InputHandler)} instance was not found in the loaded scenes.");
-                hasLoggedMissingInstance = true;
-            }
-
-            return instance;
-        }
-    }
-
-    public static bool HasInstance => instance != null;
-
-    public static bool TryGetInstance(out InputHandler foundInstance)
-    {
-        if (instance == null)
-        {
-            instance = FindFirstObjectByType<InputHandler>(
-                FindObjectsInactive.Include);
-        }
-
-        foundInstance = instance;
-        return foundInstance != null;
-    }
-
     public PlayerInput PlayerInput => playerInput;
     public InputActionAsset Actions =>
         playerInput != null ? playerInput.actions : null;
@@ -88,20 +50,15 @@ public sealed class InputHandler : PersistentSingleton<InputHandler>
     public bool IsMoveLocked => moveLocked;
     public bool IsMouseVisible => mouseVisible;
 
-    private void Awake()
+    protected override void Awake()
     {
-        if (instance != null && instance != this)
+        base.Awake();
+
+        if (!TryGetInstance(out InputHandler activeHandler) ||
+            activeHandler != this)
         {
-            Debug.LogWarning(
-                $"Duplicate {nameof(InputHandler)} found on '{gameObject.name}'. " +
-                "The duplicate GameObject will be destroyed.",
-                this);
-            Destroy(gameObject);
             return;
         }
-
-        instance = this;
-        hasLoggedMissingInstance = false;
 
         ResolveReferences(true);
         ApplyCursorState();
@@ -378,21 +335,6 @@ public sealed class InputHandler : PersistentSingleton<InputHandler>
         {
             ApplyCursorState();
         }
-    }
-
-    private void OnDestroy()
-    {
-        if (instance == this)
-        {
-            instance = null;
-        }
-    }
-
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStaticState()
-    {
-        instance = null;
-        hasLoggedMissingInstance = false;
     }
 
     private void Reset()
