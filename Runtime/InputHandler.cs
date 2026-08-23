@@ -9,7 +9,7 @@ using UnityEngine.InputSystem;
 /// the selected map remains active.
 /// </summary>
 [RequireComponent(typeof(PlayerInput))]
-public sealed class InputHandler : MonoBehaviour
+public sealed class InputHandler : PersistentSingleton<InputHandler>
 {
     private const string DefaultGameplayMapName = "Player";
     private const string DefaultMoveActionName = "Move";
