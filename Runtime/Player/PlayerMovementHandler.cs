@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Phoretell;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(CharacterController))]
@@ -38,6 +39,14 @@ public sealed class PlayerMovementHandler : MonoBehaviour
     [SerializeField] private bool sprintRequiresForwardInput = true;
     [SerializeField, Range(-1f, 1f)] private float sprintForwardThreshold = 0.1f;
 
+    [Header("Footsteps")]
+    [SerializeField] private AudioClip footstepClip;
+    [SerializeField, Range(0f, 1f)] private float footstepVolume = 0.75f;
+    [SerializeField, Min(0.1f)] private float walkStepDistance = 1.8f;
+    [SerializeField, Min(0.1f)] private float sprintStepDistance = 2.2f;
+    [SerializeField, Min(0.1f)] private float crouchStepDistance = 1.2f;
+    [SerializeField, Min(0f)] private float minimumFootstepSpeed = 0.15f;
+
     [Header("Jumping and Gravity")]
     [SerializeField, Min(0f)] private float jumpHeight = 1.35f;
     [SerializeField, Min(0.01f)] private float gravity = 25f;
@@ -70,6 +79,7 @@ public sealed class PlayerMovementHandler : MonoBehaviour
     private float verticalVelocity;
     private float coyoteTimer;
     private float jumpBufferTimer;
+    private float footstepDistanceTravelled;
     private float standingHeight;
     private Vector3 standingCenter;
     private bool crouchRequested;
@@ -172,6 +182,7 @@ public sealed class PlayerMovementHandler : MonoBehaviour
         UpdateVerticalVelocity(deltaTime);
         RotateTowardsVelocity(deltaTime);
 
+        Vector3 positionBeforeMove = transform.position;
         CollisionFlags collisionFlags = characterController.Move(
             (planarVelocity + Vector3.up * verticalVelocity) * deltaTime);
 
@@ -184,6 +195,8 @@ public sealed class PlayerMovementHandler : MonoBehaviour
             if (verticalVelocity < 0f)
                 verticalVelocity = -groundedGravity;
         }
+
+        UpdateFootsteps(positionBeforeMove);
     }
 
     public void SetCrouching(bool crouching)
@@ -383,6 +396,41 @@ public sealed class PlayerMovementHandler : MonoBehaviour
             interpolation);
     }
 
+    private void UpdateFootsteps(Vector3 positionBeforeMove)
+    {
+        if (!isGrounded)
+        {
+            footstepDistanceTravelled = 0f;
+            return;
+        }
+
+        if (footstepClip == null || CurrentSpeed < minimumFootstepSpeed)
+            return;
+
+        Vector3 displacement = transform.position - positionBeforeMove;
+        float planarDistance = Vector3.ProjectOnPlane(
+            displacement,
+            Vector3.up).magnitude;
+        if (planarDistance <= 0.0001f)
+            return;
+
+        footstepDistanceTravelled += planarDistance;
+        float stepDistance = IsCrouching
+            ? crouchStepDistance
+            : isSprinting
+                ? sprintStepDistance
+                : walkStepDistance;
+
+        if (footstepDistanceTravelled < stepDistance)
+            return;
+
+        footstepDistanceTravelled %= stepDistance;
+
+        AudioHandler audioHandler = AudioHandler.Instance;
+        if (audioHandler != null)
+            audioHandler.TryPlayEffectAudio(footstepClip, footstepVolume);
+    }
+
     private void UpdateCrouch(float deltaTime)
     {
         float targetHeight = crouchRequested ? crouchingHeight : standingHeight;
@@ -491,6 +539,10 @@ public sealed class PlayerMovementHandler : MonoBehaviour
         crouchTransitionSpeed = Mathf.Max(0f, crouchTransitionSpeed);
         groundCheckDistance = Mathf.Max(0.01f, groundCheckDistance);
         groundCheckStartOffset = Mathf.Max(0f, groundCheckStartOffset);
+        walkStepDistance = Mathf.Max(0.1f, walkStepDistance);
+        sprintStepDistance = Mathf.Max(0.1f, sprintStepDistance);
+        crouchStepDistance = Mathf.Max(0.1f, crouchStepDistance);
+        minimumFootstepSpeed = Mathf.Max(0f, minimumFootstepSpeed);
 
         if (characterController != null)
         {
